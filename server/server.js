@@ -3,6 +3,7 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const nodeRouter = require('./nodeRouter.js');
 const cookieParser = require('cookie-parser');
+var cors = require('cors')
 
 const app = express();
 app.set('port', (process.env.PORT || 5000));
@@ -20,6 +21,7 @@ const artistsToPay = {
   },
 };
 
+app.use(cors());
 app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../client/dist')));
