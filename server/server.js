@@ -7,6 +7,19 @@ const cookieParser = require('cookie-parser');
 const app = express();
 app.set('port', (process.env.PORT || 5000));
 
+const userDb = {
+  Billy: {
+    userWalletId: '1234',
+    balance: 100,
+  },
+};
+const artistsToPay = {
+  NOFX: {
+    artistWalletId: '5678',
+    btcEarned: 0,
+  },
+};
+
 app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../client/dist')));
@@ -14,6 +27,36 @@ app.use(express.static(path.join(__dirname, '../client/dist')));
 app.use('/node', nodeRouter);
 app.get('/', (req, res) => {
   res.sendFile(path.resolve(__dirname, '../client/index.html'));
+});
+
+// Endpoint to register a new user
+app.post('/register', (req, res) => {
+  const userData = req.body;
+
+  // Initialize user
+  userDb[userData.username] = {
+    userWalletId: userData.walletId,
+    balance: userData.balance,
+  };
+
+  console.log('New user added to userDB: ', userDb);
+  res.sendStatus(200);
+});
+
+// Endpoint to track user stream activity
+app.post('/track-stream', (req, res) => {
+  const data = req.body;
+
+  // Substract btc amount from user balance
+  userDb[data.username].balance -= data.trackPrice;
+
+  // Add btc ammount to artist btcEarned
+  artistsToPay[data.artist].btcEarned += data.trackPrice;
+
+  console.log('User balance updated: ', userDb);
+  console.log('Artist bitcoin updated: ', artistsToPay);
+
+  res.sendStatus(200);
 });
 
 app.listen(app.get('port'), '127.0.0.1', () => {
