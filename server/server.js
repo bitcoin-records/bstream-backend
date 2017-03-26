@@ -8,14 +8,16 @@ var cors = require('cors')
 
 const app = express();
 app.set('port', (process.env.PORT || 5000));
+const BCOIN_REST_API = 'http://localhost:5000/node';
 
-const userDb = {
+var userDb = {
   Billy: {
     userWalletId: 'mediedtestwallet',
     balance: 100,
   },
 };
-const artistsToPay = {
+
+var artistsToPay = {
   NOFX: {
     artistReceiveAddress: 'SVS5LCYh3XortwyqKdw8Bnd1dzBRrP3Sdk',
     btcEarned: 0,
@@ -53,8 +55,18 @@ app.post('/register', (req, res) => {
 app.post('/track-stream', (req, res) => {
   const data = req.body;
   var readyForPayment = false;
+  const user = userDb[data.username];
+  const artist = artistsToPay[data.artist];
 
-  if ((userDb[data.username].balance - data.trackPrice) < 0) {
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+  }
+
+  if (!artist) {
+    res.status(404).json({ error: "Artist not found" });
+  }
+
+  if ((user.balance - data.trackPrice) < 0) {
     res.status(400).json({ error: "User's balance is too low :(" });
   } else {
     // Substract btc amount from user balance
@@ -63,32 +75,22 @@ app.post('/track-stream', (req, res) => {
     // Add btc ammount to artist btcEarned
     artistsToPay[data.artist].btcEarned += data.trackPrice;
 
-    if (artistsToPay[data.artist].btcEarned > 10) {
-      readyForPayment = true;
-    
-      /*
-      const options = {
-        type: 'POST',
-        uri: '/node/wallet/mediedtestwallet/send',
-        data: {
-          rate: '0.001',
-          passphrase: 'test1234',
-          outputs: [{ value: '0.1', address: 'SPMx6oZoXevbZxe6kxrZ2EruxmQdxtvEbF' }],
-        },
-      };
-
-      request(options, (error, response, body) => {
-        console.log(body);
-      });
-      */
-    }
-
-    res.status(200).json({
-       userBalanceData: userDb[data.username].balance,
-       userWalletId: 'mediedtestwallet',
-       artistReceiveAddress: 'SVS5LCYh3XortwyqKdw8Bnd1dzBRrP3Sdk',
-       paymentDue: readyForPayment,
-    });
+    request
+      .post(`${BCOIN_REST_API}/wallet/${user.userWalletId}/send`)
+      .form({
+        rate: '0.001',
+        outputs: [{ value: '0.1', address: artist.artistReceiveAddress }],
+      })
+      .on('response', function(response) {
+        res.status(200).json({
+          balance: userDb[data.username].balance,
+          artist: artist
+        });
+      })
+      .on('error', function(err) {
+        res.status(400).json(err);
+        console.log(err)
+      })
   }
 });
 
