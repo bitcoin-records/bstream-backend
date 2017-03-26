@@ -41,8 +41,6 @@ app.post('/register', (req, res) => {
     balance: userData.balance,
   };
 
-  // console.log('New user added to userDB: ', userDb);
-
   res.status(200).json({
     username: userData.username,
     userWalletId: userDb[userData.username].userWalletId,
@@ -54,16 +52,17 @@ app.post('/register', (req, res) => {
 app.post('/track-stream', (req, res) => {
   const data = req.body;
 
-  // Substract btc amount from user balance
-  userDb[data.username].balance -= data.trackPrice;
+  if ((userDb[data.username].balance - data.trackPrice) < 0) {
+    res.status(400).json({ error: "User's balance is too low :(" });
+  } else {
+    // Substract btc amount from user balance
+    userDb[data.username].balance -= data.trackPrice;
 
-  // Add btc ammount to artist btcEarned
-  artistsToPay[data.artist].btcEarned += data.trackPrice;
+    // Add btc ammount to artist btcEarned
+    artistsToPay[data.artist].btcEarned += data.trackPrice;
 
-  // console.log('User balance updated: ', userDb);
-  // console.log('Artist bitcoin updated: ', artistsToPay);
-
-  res.status(200).json({ userBalanceData: userDb[data.username].balance });
+    res.status(200).json({ userBalanceData: userDb[data.username].balance });
+  }
 });
 
 app.listen(app.get('port'), '127.0.0.1', () => {
