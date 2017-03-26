@@ -3,19 +3,20 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const nodeRouter = require('./nodeRouter.js');
 const cookieParser = require('cookie-parser');
+const request = require('request');
 
 const app = express();
 app.set('port', (process.env.PORT || 5000));
 
 const userDb = {
   Billy: {
-    userWalletId: '1234',
+    userWalletId: 'mediedtestwallet',
     balance: 100,
   },
 };
 const artistsToPay = {
   NOFX: {
-    artistWalletId: '5678',
+    artistReceiveAddress: 'SVS5LCYh3XortwyqKdw8Bnd1dzBRrP3Sdk',
     btcEarned: 0,
   },
 };
@@ -49,6 +50,7 @@ app.post('/register', (req, res) => {
 // Endpoint to track user stream activity
 app.post('/track-stream', (req, res) => {
   const data = req.body;
+  var readyForPayment = false;
 
   if ((userDb[data.username].balance - data.trackPrice) < 0) {
     res.status(400).json({ error: "User's balance is too low :(" });
@@ -59,7 +61,32 @@ app.post('/track-stream', (req, res) => {
     // Add btc ammount to artist btcEarned
     artistsToPay[data.artist].btcEarned += data.trackPrice;
 
-    res.status(200).json({ userBalanceData: userDb[data.username].balance });
+    if (artistsToPay[data.artist].btcEarned > 10) {
+      readyForPayment = true;
+    
+      /*
+      const options = {
+        type: 'POST',
+        uri: '/node/wallet/mediedtestwallet/send',
+        data: {
+          rate: '0.001',
+          passphrase: 'test1234',
+          outputs: [{ value: '0.1', address: 'SPMx6oZoXevbZxe6kxrZ2EruxmQdxtvEbF' }],
+        },
+      };
+
+      request(options, (error, response, body) => {
+        console.log(body);
+      });
+      */
+    }
+
+    res.status(200).json({
+       userBalanceData: userDb[data.username].balance,
+       userWalletId: 'mediedtestwallet',
+       artistReceiveAddress: 'SVS5LCYh3XortwyqKdw8Bnd1dzBRrP3Sdk',
+       paymentDue: readyForPayment,
+    });
   }
 });
 
